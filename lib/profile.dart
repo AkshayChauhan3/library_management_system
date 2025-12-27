@@ -3,6 +3,17 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'services/auth_service.dart';
 
+/// Displays and allows editing of user profile information.
+///
+/// Fetches user data from Firestore and displays it in a form.
+/// Users can update their:
+/// - Full Name
+/// - Enrollment Number
+/// - Department
+/// - Semester
+/// - Mobile Number
+///
+/// Also handles the logout functionality.
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
 
@@ -20,6 +31,7 @@ class _ProfilePageState extends State<ProfilePage> {
   final TextEditingController _enrollmentController = TextEditingController();
   final TextEditingController _departmentController = TextEditingController();
   final TextEditingController _semesterController = TextEditingController();
+  final TextEditingController _mobileController = TextEditingController();
 
   @override
   void dispose() {
@@ -27,6 +39,7 @@ class _ProfilePageState extends State<ProfilePage> {
     _enrollmentController.dispose();
     _departmentController.dispose();
     _semesterController.dispose();
+    _mobileController.dispose();
     super.dispose();
   }
 
@@ -49,6 +62,7 @@ class _ProfilePageState extends State<ProfilePage> {
         'enrollment': _enrollmentController.text,
         'department': _departmentController.text,
         'semester': _semesterController.text,
+        'mobile': _mobileController.text,
       });
 
       if (mounted) {
@@ -75,8 +89,8 @@ class _ProfilePageState extends State<ProfilePage> {
     try {
       await _authService.signOut();
       if (mounted) {
-        // Pop all routes to ensure we go back to the new 'home' (LoginPage) specified in main.dart
-        Navigator.of(context).popUntil((route) => route.isFirst);
+        // Pop all routes and go to login/auth wrapper handle by main.dart
+        Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
       }
     } catch (e) {
       if (mounted) {
@@ -177,80 +191,103 @@ class _ProfilePageState extends State<ProfilePage> {
           }
 
           // Update controllers if not editing to keep in sync with DB
-          // We only do this if streams updates, but usually if we are editing we pause updates?
-          // Ideally we set initial values once. But simple approach:
           if (!isEditing) {
-            // Only update if text is effectively different to avoid cursor jumps if we were typing,
-            // but here we are !isEditing so it is fine.
             _nameController.text = userData['fullName'] ?? '';
             _enrollmentController.text = userData['enrollment'] ?? '';
             _departmentController.text = userData['department'] ?? '';
             _semesterController.text = userData['semester'] ?? '';
+            _mobileController.text = userData['mobile'] ?? '';
           }
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                children: [
-                  const CircleAvatar(
-                    radius: 50,
-                    backgroundColor: Colors.white24,
-                    child: Icon(Icons.person, size: 50, color: Colors.white),
-                  ),
-                  const SizedBox(height: 30),
-                  _buildTextField(
-                    'Full Name',
-                    _nameController,
-                    enabled: isEditing,
-                    icon: Icons.person_outline,
-                  ),
-                  _buildTextField(
-                    'Enrollment Number',
-                    _enrollmentController,
-                    enabled: isEditing,
-                    icon: Icons.numbers,
-                  ),
-                  _buildTextField(
-                    'Department',
-                    _departmentController,
-                    enabled: isEditing,
-                    icon: Icons.school,
-                  ),
-                  _buildTextField(
-                    'Semester',
-                    _semesterController,
-                    enabled: isEditing,
-                    icon: Icons.calendar_today,
-                  ),
-                  _buildTextField(
-                    'Email',
-                    TextEditingController(text: userData['email'] ?? ''),
-                    enabled: false,
-                    icon: Icons.email,
-                  ),
-
-                  const SizedBox(height: 30),
-                  if (isEditing)
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blueAccent,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        onPressed: _updateProfile,
-                        child: const Text(
-                          'Save Changes',
-                          style: TextStyle(color: Colors.white, fontSize: 16),
+          return TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0.0, end: 1.0),
+            duration: const Duration(milliseconds: 600),
+            builder: (context, value, child) {
+              return Opacity(
+                opacity: value,
+                child: Padding(
+                  padding: EdgeInsets.only(top: 20 * (1 - value)),
+                  child: child,
+                ),
+              );
+            },
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  children: [
+                    const Hero(
+                      tag: 'profile-pic',
+                      child: CircleAvatar(
+                        radius: 50,
+                        backgroundColor: Colors.white24,
+                        child: Icon(
+                          Icons.person,
+                          size: 50,
+                          color: Colors.white,
                         ),
                       ),
                     ),
-                ],
+                    const SizedBox(height: 30),
+                    _buildTextField(
+                      'Full Name',
+                      _nameController,
+                      enabled: isEditing,
+                      icon: Icons.person_outline,
+                    ),
+                    _buildTextField(
+                      'Enrollment Number',
+                      _enrollmentController,
+                      enabled: isEditing,
+                      icon: Icons.numbers,
+                    ),
+                    _buildTextField(
+                      'Department',
+                      _departmentController,
+                      enabled: isEditing,
+                      icon: Icons.school,
+                    ),
+                    _buildTextField(
+                      'Semester',
+                      _semesterController,
+                      enabled: isEditing,
+                      icon: Icons.calendar_today,
+                    ),
+                    _buildTextField(
+                      'Mobile Number',
+                      _mobileController,
+                      enabled: isEditing,
+                      icon: Icons.phone,
+                    ),
+                    _buildTextField(
+                      'Email',
+                      TextEditingController(text: userData['email'] ?? ''),
+                      enabled: false,
+                      icon: Icons.email,
+                    ),
+
+                    const SizedBox(height: 30),
+                    if (isEditing)
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blueAccent,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          onPressed: _updateProfile,
+                          child: const Text(
+                            'Save Changes',
+                            style: TextStyle(color: Colors.white, fontSize: 16),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
           );
@@ -258,31 +295,6 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
 
       // Add Bottom Navigation Bar
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: Colors.grey[900],
-        selectedItemColor: Colors.white,
-        unselectedItemColor: Colors.white54,
-        currentIndex: 2, // Profile tab is active
-        onTap: (index) {
-          if (index == 0) {
-            Navigator.pushReplacementNamed(context, '/home');
-          } else if (index == 1) {
-            // Navigator.pushReplacementNamed(context, '/books');
-            Navigator.pushNamed(
-              context,
-              '/books',
-            ); // Usually better for tab nav but replacement is fine if handled well
-          }
-        },
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard),
-            label: 'Dashboard',
-          ),
-          BottomNavigationBarItem(icon: Icon(Icons.menu_book), label: 'Books'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
-        ],
-      ),
     );
   }
 

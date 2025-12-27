@@ -5,6 +5,13 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/services.dart';
 
+/// A page that allows users to scan book barcodes to checkout or return books.
+///
+/// Uses the device camera via [MobileScanner] to read ISBNs/barcodes.
+/// Handles the logic for:
+/// - Requesting camera permissions.
+/// - Querying Firestore for book availability.
+/// - Creating borrow/return transactions.
 class BooksPage extends StatefulWidget {
   const BooksPage({super.key});
 
@@ -18,7 +25,10 @@ class _BooksPageState extends State<BooksPage> {
   bool isProcessing = false;
   String? scannedBarcode;
   Map<String, dynamic>? bookData;
-  String? activeTransactionId; // Store transaction ID if user has borrowed this book
+
+  /// Stores the ID of the active transaction if the current user has borrowed this book.
+  String?
+  activeTransactionId; // Store transaction ID if user has borrowed this book
 
   @override
   void initState() {
@@ -70,9 +80,9 @@ class _BooksPageState extends State<BooksPage> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Camera init error: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Camera init error: $e')));
     }
   }
 
@@ -129,9 +139,9 @@ class _BooksPageState extends State<BooksPage> {
       final uid = FirebaseAuth.instance.currentUser?.uid;
       if (uid == null) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Please login first')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Please login first')));
         }
         return;
       }
@@ -146,9 +156,9 @@ class _BooksPageState extends State<BooksPage> {
 
       if (!bookDoc.exists) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Book not found')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Book not found')));
         }
         return;
       }
@@ -281,9 +291,9 @@ class _BooksPageState extends State<BooksPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to borrow book: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to borrow book: $e')));
       }
     }
   }
@@ -296,10 +306,7 @@ class _BooksPageState extends State<BooksPage> {
       await FirebaseFirestore.instance
           .collection('bookTransactions')
           .doc(transactionId)
-          .update({
-        'status': 'returned',
-        'returnDate': now,
-      });
+          .update({'status': 'returned', 'returnDate': now});
 
       // Update book availability
       await FirebaseFirestore.instance.collection('books').doc(bookId).update({
@@ -318,9 +325,9 @@ class _BooksPageState extends State<BooksPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to return book: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to return book: $e')));
       }
     }
   }
@@ -349,11 +356,16 @@ class _BooksPageState extends State<BooksPage> {
               Text('ISBN: ${scannedBarcode ?? '-'}'),
               const SizedBox(height: 12),
               Container(
-                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 8,
+                  horizontal: 12,
+                ),
                 decoration: BoxDecoration(
                   color: userHasBorrowed
                       ? Colors.orange.shade50
-                      : (bookAvailable ? Colors.green.shade50 : Colors.red.shade50),
+                      : (bookAvailable
+                            ? Colors.green.shade50
+                            : Colors.red.shade50),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -376,7 +388,9 @@ class _BooksPageState extends State<BooksPage> {
                       style: TextStyle(
                         color: userHasBorrowed
                             ? Colors.orange.shade900
-                            : (bookAvailable ? Colors.green.shade900 : Colors.red.shade900),
+                            : (bookAvailable
+                                  ? Colors.green.shade900
+                                  : Colors.red.shade900),
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -392,7 +406,8 @@ class _BooksPageState extends State<BooksPage> {
             ),
             if (userHasBorrowed)
               ElevatedButton(
-                onPressed: () => _returnBook(activeTransactionId!, scannedBarcode!),
+                onPressed: () =>
+                    _returnBook(activeTransactionId!, scannedBarcode!),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blue,
                   foregroundColor: Colors.white,
@@ -434,67 +449,59 @@ class _BooksPageState extends State<BooksPage> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          Container(
-            height: 100,
-            margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.white24),
-              borderRadius: BorderRadius.circular(12),
+      body: TweenAnimationBuilder<double>(
+        tween: Tween(begin: 0.0, end: 1.0),
+        duration: const Duration(milliseconds: 600),
+        builder: (context, value, child) {
+          return Opacity(
+            opacity: value,
+            child: Transform.translate(
+              offset: Offset(0, 20 * (1 - value)),
+              child: child,
             ),
-            clipBehavior: Clip.antiAlias,
-            child: hasPermission
-                ? MobileScanner(
-                    controller: cameraController,
-                    onDetect: onDetect,
-                    fit: BoxFit.cover,
-                  )
-                : const Center(
-                    child: Text(
-                      'Requesting camera access...',
-                      style: TextStyle(color: Colors.white54),
+          );
+        },
+        child: Column(
+          children: [
+            Container(
+              height: 100,
+              margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.white24),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: hasPermission
+                  ? MobileScanner(
+                      controller: cameraController,
+                      onDetect: onDetect,
+                      fit: BoxFit.cover,
+                    )
+                  : const Center(
+                      child: Text(
+                        'Requesting camera access...',
+                        style: TextStyle(color: Colors.white54),
+                      ),
                     ),
-                  ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Text(
-              isProcessing ? 'Processing...' : 'Align barcode within frame',
-              style: const TextStyle(color: Colors.white70),
             ),
-          ),
-          if (scannedBarcode != null)
             Padding(
-              padding: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.symmetric(vertical: 8),
               child: Text(
-                'Last: $scannedBarcode',
-                style: const TextStyle(color: Colors.white54),
+                isProcessing ? 'Processing...' : 'Align barcode within frame',
+                style: const TextStyle(color: Colors.white70),
               ),
             ),
-          const Spacer(),
-        ],
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: Colors.grey[900],
-        selectedItemColor: Colors.white,
-        unselectedItemColor: Colors.white54,
-        currentIndex: 1,
-        onTap: (index) {
-          if (index == 0) {
-            Navigator.pushReplacementNamed(context, '/home');
-          } else if (index == 2) {
-            Navigator.pushReplacementNamed(context, '/profile');
-          }
-        },
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard),
-            label: 'Dashboard',
-          ),
-          BottomNavigationBarItem(icon: Icon(Icons.menu_book), label: 'Books'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
-        ],
+            if (scannedBarcode != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text(
+                  'Last: $scannedBarcode',
+                  style: const TextStyle(color: Colors.white54),
+                ),
+              ),
+            const Spacer(),
+          ],
+        ),
       ),
     );
   }

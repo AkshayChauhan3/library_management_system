@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'firebase_options.dart';
 import 'LoginPage.dart';
 import 'HomePage.dart';
 import 'profile.dart';
 import 'BooksPage.dart';
-import 'services/auth_service.dart';
+import 'main_layout.dart';
+import 'services/auth_wrapper.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,18 +26,7 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Library Management',
       theme: ThemeData(primarySwatch: Colors.blue),
-      home: StreamBuilder<User?>(
-        stream: AuthService().authStateChanges,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasData) {
-            return const HomePage();
-          }
-          return const LoginPage();
-        },
-      ),
+      home: const AuthWrapper(),
       routes: {
         '/login': (context) => const LoginPage(),
         '/home': (context) => const HomePage(),

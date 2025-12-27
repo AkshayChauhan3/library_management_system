@@ -1,71 +1,72 @@
 # Library Management App
 
-A modern Flutter application for managing library operations, built with Firebase for real-time data and authentication.
+A comprehensive Flutter application for managing library operations, built with Firebase backend. This app facilitates user authentication, book borrowing/returning via barcode scanning, and digital identity management.
 
 ## Features
 
 *   **User Authentication**:
-    *   Secure Email & Password Login/Registration.
+    *   Secure login and registration using Firebase Auth.
     *   Google Sign-In integration.
-    *   **Persistent Login**: Users stay logged in across app restarts.
-*   **Dashboard**:
-    *   View current check-in status.
-    *   Digital Library ID card with QR Code.
-    *   View currently issued books and their due dates.
+    *   First-time user registration flow to capture student details (Enrollment, Department, etc.).
+
+*   **Dashboard (Home)**:
+    *   **Digital ID Card**: Generates a QR code containing student details for easy library check-in.
+    *   **Check-in Status**: Displays current library check-in status.
+    *   **Issued Books**: Real-time list of currently borrowed books with due dates and overdue alerts.
+    *   **Personalized Experience**: Dynamic greeting with the user's name.
+
+*   **Book Management**:
+    *   **Barcode Scanning**: Use the device camera to scan book ISBNs/barcodes.
+    *   **Borrow/Return**: Seamless workflow to borrow available books or return books currently in possession.
+    *   **Availability Checker**: Instantly check if a book is available or currently borrowed by another user.
+
 *   **Profile Management**:
-    *   Update personal details (Name, Enrollment, Department, Semester).
-    *   Logout functionality.
-*   **Book Tracking**:
-    *   Real-time tracking of borrowed books.
-    *   Visual indicators for overdue books.
+    *   View and edit personal details (Name, Enrollment, Mobile, etc.).
+    *   Digital profile picture management.
+
+*   **Smooth UI/UX**:
+    *   **Persistent Navigation**: Smooth transitions between tabs using a persistent bottom navigation bar.
+    *   **Animations**: Entrance animations and stagger effects for a polished look.
 
 ## Tech Stack
 
 *   **Frontend**: Flutter (Dart)
-*   **Backend**: Firebase (Core, Auth, Cloud Firestore)
-*   **State Management**: `StreamBuilder` & `setState`
+*   **Backend**: Firebase (Auth, Firestore)
 *   **Key Packages**:
-    *   `firebase_auth`: Authentication
-    *   `cloud_firestore`: Database
-    *   `google_sign_in`: Google Auth support
-    *   `qr_flutter`: QR Code generation
-    *   `slide_to_act`: Interactive UI elements
+    *   `firebase_auth`, `cloud_firestore`: Backend services.
+    *   `mobile_scanner`: For scanning book barcodes.
+    *   `qr_flutter`: For generating the digital ID QR code.
+    *   `google_sign_in`: Social auth.
+    *   `slide_to_act`: Interactive UI elements.
 
 ## Getting Started
 
-### Prerequisites
+1.  **Prerequisites**:
+    *   Flutter SDK installed.
+    *   Firebase project set up.
 
-*   Flutter SDK installed.
-*   Firebase project configured.
-
-### Installation
-
-1.  Clone the repository:
+2.  **Installation**:
     ```bash
-    git clone https://github.com/yourusername/library_management_app.git
-    ```
-2.  Install dependencies:
-    ```bash
+    git clone <repository-url>
+    cd library_management_app
     flutter pub get
     ```
-3.  Run the app:
+
+3.  **Firebase Setup**:
+    *   Ensure `google-services.json` (Android) or `GoogleService-Info.plist` (iOS) is placed in the respective app directories.
+    *   Currently configured for Android. Run `flutterfire configure` to set up for other platforms.
+
+4.  **Run the App**:
     ```bash
     flutter run
     ```
 
 ## Project Structure
 
-```
-lib/
-├── main.dart           # Entry point & Auth State listener
-├── LoginPage.dart      # Login & Registration UI
-├── HomePage.dart       # Main Dashboard
-├── profile.dart        # User Profile & Settings
-├── BooksPage.dart      # Books listing (if applicable)
-└── services/
-    └── auth_service.dart # Centralized Authentication Logic
-```
-
-## Contributing
-
-Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
+*   `lib/main.dart`: Entry point of the application.
+*   `lib/main_layout.dart`: Main container with persistent bottom navigation.
+*   `lib/services/auth_wrapper.dart`: Handles authentication state and routing.
+*   `lib/HomePage.dart`: Dashboard showing ID card and issued books.
+*   `lib/BooksPage.dart`: Scanner interface for borrowing/returning books.
+*   `lib/profile.dart`: User profile management.
+*   `lib/registrationPage.dart`: First-time user setup.
