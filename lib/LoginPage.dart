@@ -149,8 +149,9 @@ class _LoginPageState extends State<LoginPage> {
                         label: 'Email',
                         keyboardType: TextInputType.emailAddress,
                         validator: (v) {
-                          if (v == null || v.trim().isEmpty)
+                          if (v == null || v.trim().isEmpty) {
                             return 'Enter email';
+                          }
                           if (!v.contains('@')) return 'Invalid email';
                           return null;
                         },
