@@ -19,7 +19,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    _initializeUserData();
+    _initializeData();
   }
 
   String _getRemainingDays(Timestamp dueDate) {
@@ -37,23 +37,9 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  Future<void> _initializeUserData() async {
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-
-      if (user == null) {
-        // Should not happen if main.dart works correctly, but safe to have
-        if (mounted) {
-          Navigator.pushReplacementNamed(context, '/login');
-        }
-        return;
-      }
-
-      final uid = user.uid;
-      // We can still store it in prefs if other parts of the app rely on it blindly,
-      // but it's better to rely on FirebaseAuth.
-      // Keeping it simple for now.
-
+  void _initializeData() {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null) {
       setState(() {
         userStream = FirebaseFirestore.instance
             .collection('users')
@@ -67,8 +53,6 @@ class _HomePageState extends State<HomePage> {
             .where('status', isEqualTo: 'borrowed')
             .snapshots();
       });
-    } catch (e) {
-      print('Error initializing data: $e');
     }
   }
 

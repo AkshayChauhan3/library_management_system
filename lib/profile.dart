@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
+import 'services/auth_service.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -12,7 +12,8 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   bool isEditing = false;
-  final _formKey = GlobalKey<FormState>();
+  final _formKey = GlobalKey<FormState>(); // Form Key to validate input
+  final _authService = AuthService();
 
   // Text controllers
   final TextEditingController _nameController = TextEditingController();
@@ -35,6 +36,13 @@ class _ProfilePageState extends State<ProfilePage> {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
 
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
     try {
       await FirebaseFirestore.instance.collection('users').doc(uid).update({
         'fullName': _nameController.text,
@@ -44,29 +52,38 @@ class _ProfilePageState extends State<ProfilePage> {
       });
 
       if (mounted) {
+        Navigator.pop(context); // Remove loading
         setState(() => isEditing = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile updated successfully!')),
+          const SnackBar(
+            content: Text('Profile updated successfully!'),
+            backgroundColor: Colors.green,
+          ),
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Failed to update profile')));
+      if (mounted) {
+        Navigator.pop(context); // Remove loading
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to update profile: $e')));
+      }
     }
   }
 
-  Future<void> _logout() async {
+  Future<void> _handleLogout() async {
     try {
-      await GoogleSignIn().signOut();
-      await FirebaseAuth.instance.signOut();
+      await _authService.signOut();
       if (mounted) {
-        Navigator.of(
-          context,
-        ).pushNamedAndRemoveUntil('/login', (route) => false);
+        // Pop all routes to ensure we go back to the new 'home' (LoginPage) specified in main.dart
+        Navigator.of(context).popUntil((route) => route.isFirst);
       }
     } catch (e) {
-      print("Error signing out: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error signing out: $e')));
+      }
     }
   }
 
@@ -75,6 +92,7 @@ class _ProfilePageState extends State<ProfilePage> {
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
+        iconTheme: const IconThemeData(color: Colors.white),
         backgroundColor: Colors.grey[900],
         title: const Text('Profile', style: TextStyle(color: Colors.white)),
         actions: [
@@ -87,11 +105,44 @@ class _ProfilePageState extends State<ProfilePage> {
                 setState(() => isEditing = true);
               }
             },
+            tooltip: isEditing ? 'Save Profile' : 'Edit Profile',
             color: Colors.white,
           ),
           IconButton(
             icon: const Icon(Icons.logout),
-            onPressed: _logout,
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  backgroundColor: Colors.grey[900],
+                  title: const Text(
+                    'Logout',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  content: const Text(
+                    'Are you sure you want to logout?',
+                    style: TextStyle(color: Colors.white70),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _handleLogout();
+                      },
+                      child: const Text(
+                        'Logout',
+                        style: TextStyle(color: Colors.redAccent),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+            tooltip: 'Logout',
             color: Colors.redAccent,
           ),
         ],
@@ -103,7 +154,12 @@ class _ProfilePageState extends State<ProfilePage> {
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return const Center(child: Text('Error loading profile'));
+            return const Center(
+              child: Text(
+                'Error loading profile',
+                style: TextStyle(color: Colors.white),
+              ),
+            );
           }
 
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -112,11 +168,20 @@ class _ProfilePageState extends State<ProfilePage> {
 
           final userData = snapshot.data?.data() as Map<String, dynamic>?;
           if (userData == null) {
-            return const Center(child: Text('No profile data found'));
+            return const Center(
+              child: Text(
+                'No profile data found',
+                style: TextStyle(color: Colors.white),
+              ),
+            );
           }
 
-          // Update controllers if not editing
+          // Update controllers if not editing to keep in sync with DB
+          // We only do this if streams updates, but usually if we are editing we pause updates?
+          // Ideally we set initial values once. But simple approach:
           if (!isEditing) {
+            // Only update if text is effectively different to avoid cursor jumps if we were typing,
+            // but here we are !isEditing so it is fine.
             _nameController.text = userData['fullName'] ?? '';
             _enrollmentController.text = userData['enrollment'] ?? '';
             _departmentController.text = userData['department'] ?? '';
@@ -165,6 +230,26 @@ class _ProfilePageState extends State<ProfilePage> {
                     enabled: false,
                     icon: Icons.email,
                   ),
+
+                  const SizedBox(height: 30),
+                  if (isEditing)
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blueAccent,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        onPressed: _updateProfile,
+                        child: const Text(
+                          'Save Changes',
+                          style: TextStyle(color: Colors.white, fontSize: 16),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -182,7 +267,11 @@ class _ProfilePageState extends State<ProfilePage> {
           if (index == 0) {
             Navigator.pushReplacementNamed(context, '/home');
           } else if (index == 1) {
-            Navigator.pushReplacementNamed(context, '/books');
+            // Navigator.pushReplacementNamed(context, '/books');
+            Navigator.pushNamed(
+              context,
+              '/books',
+            ); // Usually better for tab nav but replacement is fine if handled well
           }
         },
         items: const [
@@ -213,17 +302,23 @@ class _ProfilePageState extends State<ProfilePage> {
           labelText: label,
           labelStyle: TextStyle(color: enabled ? Colors.white : Colors.white54),
           prefixIcon: Icon(icon, color: Colors.white54),
+          filled: true,
+          fillColor: Colors.white10,
           enabledBorder: OutlineInputBorder(
-            borderSide: const BorderSide(color: Colors.white24),
-            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide.none,
+            borderRadius: BorderRadius.circular(12),
           ),
           focusedBorder: OutlineInputBorder(
-            borderSide: const BorderSide(color: Colors.white),
-            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: Colors.blueAccent),
+            borderRadius: BorderRadius.circular(12),
           ),
           disabledBorder: OutlineInputBorder(
-            borderSide: const BorderSide(color: Colors.white10),
-            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide.none,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          errorBorder: OutlineInputBorder(
+            borderSide: const BorderSide(color: Colors.redAccent),
+            borderRadius: BorderRadius.circular(12),
           ),
         ),
         validator: (value) {

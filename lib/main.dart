@@ -4,8 +4,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'firebase_options.dart';
 import 'LoginPage.dart';
 import 'HomePage.dart';
-import 'profile.dart'; // Make sure this is the only profile import
+import 'profile.dart';
 import 'BooksPage.dart';
+import 'services/auth_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,23 +26,15 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Library Management',
       theme: ThemeData(primarySwatch: Colors.blue),
-      // Listen to auth state changes to decide where to go
       home: StreamBuilder<User?>(
-        stream: FirebaseAuth.instance.authStateChanges(),
+        stream: AuthService().authStateChanges,
         builder: (context, snapshot) {
-          // If the stream is waiting, show a loading indicator
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
-            );
+            return const Center(child: CircularProgressIndicator());
           }
-
-          // If we have data (a user), go to HomePage
           if (snapshot.hasData) {
             return const HomePage();
           }
-
-          // Otherwise, go to LoginPage
           return const LoginPage();
         },
       ),
