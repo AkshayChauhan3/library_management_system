@@ -6,40 +6,31 @@ import 'package:library_management_app/HomePage.dart';
 import 'package:library_management_app/registrationPage.dart'; // registration page screen
 import 'package:slide_to_act/slide_to_act.dart'; // slide to conform button
 
-class LoginPage extends StatefulWidget { //Statefulwidget is like TV and statelesswidget is like poster
-  const LoginPage({super.key}); // ({super.key} : pass identification info to the parent class
-  // const = once created then not change 
-  @override // writing the buil in method in my own way
-  State<LoginPage> createState() => _LoginPageState(); 
-  // stateful widget have two part : 
-  // 1) widget: Bluerpint 
-  // 2) state: where the logic and veriables are store
-  // inside state we have build function who create ui
-  // create state for login page and loginpagestate will be the function for LoginPage state
+class LoginPage extends StatefulWidget {
+  const LoginPage({super.key});
+
+  @override
+  State<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {  // now we are defning our login page here
- 
-  // text editing controller which store value that user enter
+class _LoginPageState extends State<LoginPage> {
   final _email = TextEditingController();
   final _password = TextEditingController();
 
-  final _formKey = GlobalKey<FormState>(); // formkey is userdefine veriable for formstate the build in method
-  final GlobalKey<SlideActionState> _slideKey = GlobalKey<SlideActionState>(); // slide key is also a veriable for built in method
+  final _formKey = GlobalKey<FormState>();
+  final GlobalKey<SlideActionState> _slideKey = GlobalKey<SlideActionState>();
 
-  bool _busy = false; 
+  bool _busy = false;
 
   @override
-  void dispose() { // clear the data which is stored in ram by textediting controller
-    _email.dispose(); 
+  void dispose() {
+    // clear the data which is stored in ram by textediting controller
+    _email.dispose();
     _password.dispose();
     super.dispose(); // cheak to clear the texteditingcontroller of parent class
   }
 
-  Future<void> _checkUserAndNavigate(User user) async { 
-  // async function which returns nothing void 
-  // (User user) → takes a User object (from FirebaseAuth) as input
-  
+  Future<void> _checkUserAndNavigate(User user) async {
     final doc = await FirebaseFirestore.instance
         .collection('users')
         .doc(user.uid)

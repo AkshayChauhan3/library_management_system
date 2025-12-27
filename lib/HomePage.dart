@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -40,25 +39,27 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _initializeUserData() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final uid =
-          FirebaseAuth.instance.currentUser?.uid ?? prefs.getString('uid');
+      final user = FirebaseAuth.instance.currentUser;
 
-      if (uid == null) {
+      if (user == null) {
+        // Should not happen if main.dart works correctly, but safe to have
         if (mounted) {
           Navigator.pushReplacementNamed(context, '/login');
         }
         return;
       }
 
-      prefs.setString('uid', uid);
+      final uid = user.uid;
+      // We can still store it in prefs if other parts of the app rely on it blindly,
+      // but it's better to rely on FirebaseAuth.
+      // Keeping it simple for now.
 
       setState(() {
         userStream = FirebaseFirestore.instance
             .collection('users')
             .doc(uid)
             .snapshots();
-        
+
         // Initialize book stream immediately
         bookStream = FirebaseFirestore.instance
             .collection('bookTransactions')
@@ -260,7 +261,8 @@ Email: $email
                 StreamBuilder<QuerySnapshot>(
                   stream: bookStream,
                   builder: (context, bookSnapshot) {
-                    if (bookSnapshot.connectionState == ConnectionState.waiting) {
+                    if (bookSnapshot.connectionState ==
+                        ConnectionState.waiting) {
                       return Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(18),
@@ -285,13 +287,16 @@ Email: $email
                         child: Center(
                           child: Text(
                             "Error: ${bookSnapshot.error}",
-                            style: const TextStyle(color: Colors.red, fontSize: 14),
+                            style: const TextStyle(
+                              color: Colors.red,
+                              fontSize: 14,
+                            ),
                           ),
                         ),
                       );
                     }
 
-                    if (!bookSnapshot.hasData || 
+                    if (!bookSnapshot.hasData ||
                         bookSnapshot.data == null ||
                         bookSnapshot.data!.docs.isEmpty) {
                       return Container(
@@ -305,7 +310,10 @@ Email: $email
                         child: const Center(
                           child: Text(
                             "No books issued currently.",
-                            style: TextStyle(color: Colors.white70, fontSize: 16),
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 16,
+                            ),
                           ),
                         ),
                       );
@@ -349,7 +357,7 @@ Email: $email
                                   ),
                               ],
                             );
-                          }).toList(),
+                          }),
                         ],
                       ),
                     );
@@ -386,8 +394,9 @@ Email: $email
 
   Widget _buildBookCard(Map<String, dynamic> bookData) {
     final dueDate = bookData['dueDate'] as Timestamp?;
-    final isOverdue = dueDate != null && dueDate.toDate().isBefore(DateTime.now());
-    
+    final isOverdue =
+        dueDate != null && dueDate.toDate().isBefore(DateTime.now());
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
